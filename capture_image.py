@@ -79,7 +79,7 @@ if st.button("Start Emotion and Age Detection" if not st.session_state.detection
     st.session_state.detection_started = not st.session_state.detection_started
     if st.session_state.detection_started:
         # Initialize webcam
-        st.session_state.video_capture = cv2.VideoCapture(0)  
+        st.session_state.video_capture = cv2.VideoCapture(0)  # Use camera index here
         if not st.session_state.video_capture.isOpened():
             st.error("Could not open webcam. Please check your camera or permissions.")
             st.session_state.detection_started = False
