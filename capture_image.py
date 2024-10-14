@@ -4,6 +4,7 @@ import numpy as np
 from fer import FER
 import time
 import os
+import tempfile
 
 # Load the pre-trained age detection model
 AGE_MODEL = "age_deploy.prototxt"
@@ -24,11 +25,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-# Directory to save the captured images
-output_dir = "captured_images"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
 
 # Placeholders for image display and information
 stframe = st.empty()
@@ -88,8 +84,16 @@ if camera_image is not None:
         emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
         age_label_placeholder.write(f"Estimated Age: {age}")
 
-        # Save the frame to disk if a dominant emotion is detected
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        image_path = os.path.join(output_dir, f"{dominant_emotion}_{timestamp}.jpg")
-        cv2.imwrite(image_path, frame)
-        st.success(f"Frame captured and saved as {image_path}")
+        # Save the frame to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+            cv2.imwrite(tmp_file.name, frame)
+            st.success(f"Frame captured and saved temporarily at {tmp_file.name}")
+
+        # Provide a download link for the captured image
+        with open(tmp_file.name, "rb") as f:
+            st.download_button(
+                label="Download Captured Image",
+                data=f,
+                file_name=f"{dominant_emotion}_{time.strftime('%Y%m%d-%H%M%S')}.jpg",
+                mime="image/jpeg"
+            )
