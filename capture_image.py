@@ -126,7 +126,7 @@ if st.session_state.detection_started:
             blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227), (78.4263377603, 87.7689143744, 114.895847746), swapRB=False)
             age_net.setInput(blob)
             age_preds = age_net.forward()
-            age = AGE_RANGES[age_preds[0].argmax()]
+            age = AGE_RANGES[age_preds[0].argmax()] if age_preds[0].max() > 0 else "N/A"
 
             # Display age
             cv2.putText(frame, f"Age: {age}", (bounding_box[0], bounding_box[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
