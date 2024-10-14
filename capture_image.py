@@ -28,7 +28,6 @@ st.markdown(
 
 # Placeholders for image display and information
 stframe = st.empty()
-progress_placeholder = st.empty()
 emotion_label_placeholder = st.empty()
 age_label_placeholder = st.empty()
 
@@ -75,12 +74,29 @@ if camera_image is not None:
         cv2.putText(frame, f"Age: {age}", (bounding_box[0], bounding_box[1] - 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
+    # Draw the progress bar on the frame
+    progress_bar_length = 200
+    progress_bar_height = 20
+    cv2.rectangle(frame, (bounding_box[0], bounding_box[1] + bounding_box[3] + 5), 
+                      (bounding_box[0] + progress_bar_length, bounding_box[1] + bounding_box[3] + 5 + progress_bar_height), 
+                      (255, 255, 255), -1)  # Background
+
+    filled_length = int(progress_bar_length * (dominant_emotion_score / 100))  # Calculate filled length
+    cv2.rectangle(frame, (bounding_box[0], bounding_box[1] + bounding_box[3] + 5), 
+                      (bounding_box[0] + filled_length, bounding_box[1] + bounding_box[3] + 5 + progress_bar_height), 
+                      (0, 255, 0), -1)  # Fill with color
+
+    # Add percentage text on the progress bar
+    percentage_text = f"{dominant_emotion_score:.2f}%"
+    text_x = bounding_box[0] + (progress_bar_length // 2) - (cv2.getTextSize(percentage_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0][0] // 2)
+    text_y = bounding_box[1] + bounding_box[3] + 5 + (progress_bar_height // 2) + 6
+    cv2.putText(frame, percentage_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+
     # Display the frame in Streamlit
     stframe.image(frame, channels='BGR')
 
     # Update emotion and age labels
     if dominant_emotion:
-        progress_placeholder.progress(int(dominant_emotion_score))
         emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
         age_label_placeholder.write(f"Estimated Age: {age}")
 
