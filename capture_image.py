@@ -78,20 +78,33 @@ def release_webcam():
 if st.button("Start Emotion and Age Detection" if not st.session_state.detection_started else "Stop Emotion and Age Detection"):
     st.session_state.detection_started = not st.session_state.detection_started
     if st.session_state.detection_started:
-        st.session_state.video_capture = cv2.VideoCapture(0)  # Initialize webcam
+        # Initialize webcam
+        st.session_state.video_capture = cv2.VideoCapture(0)  
         if not st.session_state.video_capture.isOpened():
             st.error("Could not open webcam. Please check your camera or permissions.")
             st.session_state.detection_started = False
+        else:
+            st.success("Webcam initialized successfully.")
 
 # Process the video feed if detection is started
 if st.session_state.detection_started:
     while st.session_state.detection_started:
+        if st.session_state.video_capture is None:  # Check if video_capture is None
+            st.error("Webcam is not initialized. Please restart the detection.")
+            break
+        
         ret, frame = st.session_state.video_capture.read()
 
+        # Check if the frame was captured successfully
         if not ret:
-            st.error("Failed to capture image")
+            st.error("Failed to capture image. Retrying...")
             release_webcam()
-            break
+            st.session_state.video_capture = cv2.VideoCapture(0)  # Try to reinitialize
+            if not st.session_state.video_capture.isOpened():
+                st.error("Could not re-open webcam. Please check your camera or permissions.")
+                st.session_state.detection_started = False
+                break
+            continue  # Skip the rest of the loop if the frame is not captured
 
         # Detect faces and emotions
         results = detector.detect_emotions(frame)
@@ -149,11 +162,11 @@ if st.session_state.detection_started:
         # Update emotion and age labels
         if dominant_emotion:
             progress_placeholder.progress(int(dominant_emotion_score))
-            emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
+            emotion_label_placeholder.write(f"Detected Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
             age_label_placeholder.write(f"Estimated Age: {age}")
 
-        time.sleep(0.1)  # Control the frame rate
+        time.sleep(0.1)
 
-# Release the webcam when the session ends
-if not st.session_state.detection_started:
+# Release webcam on app stop
+if st.session_state.video_capture is not None:
     release_webcam()
