@@ -3,24 +3,7 @@ import cv2
 import numpy as np
 from fer import FER
 import time
-import base64
 import os
-
-# Function to get the base64 string of the image
-def get_base64_of_image(file_path):
-    with open(file_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode()
-
-# Load your logo image as base64
-logo_base64 = get_base64_of_image("logo.jpg")  # Replace with your logo image file path
-
-logo_html = f"""
-    <div style="text-align: left; padding: 10px;">
-        <img src="data:image/jpeg;base64,{logo_base64}" style="border-radius: 50%; width: 100px; height: 100px;" alt="Logo"/>
-    </div>
-"""
-
-st.markdown(logo_html, unsafe_allow_html=True)
 
 # Load the pre-trained age detection model
 AGE_MODEL = "age_deploy.prototxt"
@@ -42,16 +25,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Initialize session state for webcam capture and detection
-if 'video_capture' not in st.session_state:
-    st.session_state.video_capture = None
-if 'detection_started' not in st.session_state:
-    st.session_state.detection_started = False
-if 'captured_frames' not in st.session_state:
-    st.session_state.captured_frames = []  # To store captured frames
-if 'previous_emotion' not in st.session_state:
-    st.session_state.previous_emotion = None  # To track the previous detected emotion
-
 # Directory to save the captured images
 output_dir = "captured_images"
 if not os.path.exists(output_dir):
@@ -63,110 +36,60 @@ progress_placeholder = st.empty()
 emotion_label_placeholder = st.empty()
 age_label_placeholder = st.empty()
 
-# Function to get the color for the progress bar based on emotion score
-def get_bar_color(score):
-    return (0, 0, 0)  # Black for the bar
+# Capture webcam image from the user
+camera_image = st.camera_input("Capture an image from your webcam")
 
-# Function to release the webcam
-def release_webcam():
-    if st.session_state.video_capture is not None:
-        st.session_state.video_capture.release()
-        st.session_state.video_capture = None
-        cv2.destroyAllWindows()
+# If an image is captured, process it
+if camera_image is not None:
+    # Convert the captured image to OpenCV format
+    file_bytes = np.asarray(bytearray(camera_image.read()), dtype=np.uint8)
+    frame = cv2.imdecode(file_bytes, 1)
 
-# Start/Stop Emotion and Age Detection button
-if st.button("Start Emotion and Age Detection" if not st.session_state.detection_started else "Stop Emotion and Age Detection"):
-    st.session_state.detection_started = not st.session_state.detection_started
-    if st.session_state.detection_started:
-        # Initialize webcam
-        st.session_state.video_capture = cv2.VideoCapture(0)  # Use camera index here
-        if not st.session_state.video_capture.isOpened():
-            st.error("Could not open webcam. Please check your camera or permissions.")
-            st.session_state.detection_started = False
-        else:
-            st.success("Webcam initialized successfully.")
+    # Detect faces and emotions
+    results = detector.detect_emotions(frame)
 
-# Process the video feed if detection is started
-if st.session_state.detection_started:
-    while st.session_state.detection_started:
-        if st.session_state.video_capture is None:  # Check if video_capture is None
-            st.error("Webcam is not initialized. Please restart the detection.")
-            break
-        
-        ret, frame = st.session_state.video_capture.read()
+    # Initialize dominant emotion and age
+    dominant_emotion = None
+    dominant_emotion_score = 0
+    age = "N/A"
 
-        # Check if the frame was captured successfully
-        if not ret:
-            st.error("Failed to capture image. Retrying...")
-            release_webcam()
-            st.session_state.video_capture = cv2.VideoCapture(0)  # Try to reinitialize
-            if not st.session_state.video_capture.isOpened():
-                st.error("Could not re-open webcam. Please check your camera or permissions.")
-                st.session_state.detection_started = False
-                break
-            continue  # Skip the rest of the loop if the frame is not captured
+    for result in results:
+        bounding_box = result['box']
+        emotions = result['emotions']
+        dominant_emotion = max(emotions, key=emotions.get)
+        dominant_emotion_score = emotions[dominant_emotion] * 100  # Scale to percentage
 
-        # Detect faces and emotions
-        results = detector.detect_emotions(frame)
+        # Draw bounding box and labels
+        cv2.rectangle(frame, (bounding_box[0], bounding_box[1]), 
+                      (bounding_box[0] + bounding_box[2], bounding_box[1] + bounding_box[3]), 
+                      (0, 255, 0), 2)
+        cv2.putText(frame, dominant_emotion, (bounding_box[0], bounding_box[1] - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
 
-        # Initialize dominant emotion and age
-        dominant_emotion = None
-        dominant_emotion_score = 0
-        age = "N/A"
+        # Age detection
+        face = frame[bounding_box[1]:bounding_box[1] + bounding_box[3], 
+                     bounding_box[0]:bounding_box[0] + bounding_box[2]]
+        blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227), 
+                                       (78.4263377603, 87.7689143744, 114.895847746), swapRB=False)
+        age_net.setInput(blob)
+        age_preds = age_net.forward()
+        age = AGE_RANGES[age_preds[0].argmax()]  # Get the predicted age range
 
-        for result in results:
-            bounding_box = result['box']
-            emotions = result['emotions']
-            dominant_emotion = max(emotions, key=emotions.get)
-            dominant_emotion_score = emotions[dominant_emotion] * 100  # Scale to percentage
+        # Display age
+        cv2.putText(frame, f"Age: {age}", (bounding_box[0], bounding_box[1] - 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
-            # Draw bounding box and labels
-            cv2.rectangle(frame, (bounding_box[0], bounding_box[1]), (bounding_box[0] + bounding_box[2], bounding_box[1] + bounding_box[3]), (0, 255, 0), 2)
-            cv2.putText(frame, dominant_emotion, (bounding_box[0], bounding_box[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+    # Display the frame in Streamlit
+    stframe.image(frame, channels='BGR')
 
-            # Draw progress bar based on emotion score
-            bar_x_start, bar_y_start = bounding_box[0], bounding_box[1] + bounding_box[3] + 10
-            bar_x_end = bar_x_start + bounding_box[2]
-            bar_y_end = bar_y_start + 20
-            cv2.rectangle(frame, (bar_x_start, bar_y_start), (bar_x_end, bar_y_end), (50, 50, 50), -1)
-            bar_filled_x_end = int(bar_x_start + (bounding_box[2] * (dominant_emotion_score / 100)))
-            bar_color = get_bar_color(dominant_emotion_score)
-            cv2.rectangle(frame, (bar_x_start, bar_y_start), (bar_filled_x_end, bar_y_end), bar_color, -1)
-            cv2.putText(frame, f"{dominant_emotion_score:.2f}%", (bar_x_start, bar_y_start + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    # Update emotion and age labels
+    if dominant_emotion:
+        progress_placeholder.progress(int(dominant_emotion_score))
+        emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
+        age_label_placeholder.write(f"Estimated Age: {age}")
 
-            # Age detection
-            face = frame[bounding_box[1]:bounding_box[1] + bounding_box[3], bounding_box[0]:bounding_box[0] + bounding_box[2]]
-            blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227), (78.4263377603, 87.7689143744, 114.895847746), swapRB=False)
-            age_net.setInput(blob)
-            age_preds = age_net.forward()
-            age = AGE_RANGES[age_preds[0].argmax()] if age_preds[0].max() > 0 else "N/A"
-
-            # Display age
-            cv2.putText(frame, f"Age: {age}", (bounding_box[0], bounding_box[1] - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-
-            # Automatically capture the frame if emotion changes and save it
-            if st.session_state.previous_emotion != dominant_emotion:
-                st.session_state.captured_frames.append(frame.copy())
-                st.session_state.previous_emotion = dominant_emotion
-
-                # Save the frame to disk
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                image_path = os.path.join(output_dir, f"{dominant_emotion}_{timestamp}.jpg")
-                cv2.imwrite(image_path, frame)
-
-                st.success(f"Frame captured and saved as {image_path} due to emotion change to {dominant_emotion}")
-
-        # Display the frame in Streamlit
-        stframe.image(frame, channels='BGR')
-
-        # Update emotion and age labels
-        if dominant_emotion:
-            progress_placeholder.progress(int(dominant_emotion_score))
-            emotion_label_placeholder.write(f"Detected Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
-            age_label_placeholder.write(f"Estimated Age: {age}")
-
-        time.sleep(0.1)
-
-# Release webcam on app stop
-if st.session_state.video_capture is not None:
-    release_webcam()
+        # Save the frame to disk if a dominant emotion is detected
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        image_path = os.path.join(output_dir, f"{dominant_emotion}_{timestamp}.jpg")
+        cv2.imwrite(image_path, frame)
+        st.success(f"Frame captured and saved as {image_path}")
