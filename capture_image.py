@@ -4,6 +4,7 @@ import numpy as np
 from fer import FER
 import time
 import tempfile
+import base64
 
 # Load the pre-trained age detection model
 AGE_MODEL = "age_deploy.prototxt"
@@ -16,11 +17,27 @@ AGE_RANGES = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(21-30)', '(38-43)', '(48-
 # Initialize the FER detector
 detector = FER()
 
+# Function to get the base64 string of the image
+def get_base64_of_image(file_path):
+    with open(file_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+# Load your logo image as base64
+logo_base64 = get_base64_of_image("logo.jpg")  # Replace with your logo image file path
+
+logo_html = f"""
+    <div style="text-align: left; padding: 10px;">
+        <img src="data:image/jpeg;base64,{logo_base64}" style="border-radius: 50%; width: 100px; height: 100px;" alt="Logo"/>
+    </div>
+"""
+
+st.markdown(logo_html, unsafe_allow_html=True)
+
 # Custom title and description
 st.markdown(
     """
-    <h1 style='color: white;'>Real-time Emotion and Age Detection</h1>
-    <p style='color: yellow;'>Use your webcam to detect emotions and estimate age in real time.</p>
+    <h1 style='color: Black;'>Real-time Emotion and Age Detection</h1>
+    <p style='color: Black;'>Use your webcam to detect emotions and estimate age in real time.</p>
     """,
     unsafe_allow_html=True
 )
