@@ -3,3 +3,4 @@ streamlit
 fer
 numpy
 h5py
+tensorflow
