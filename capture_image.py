@@ -26,8 +26,8 @@ def get_base64_of_image(file_path):
 logo_base64 = get_base64_of_image("logo.jpg")  # Replace with your logo image file path
 
 logo_html = f"""
-    <div style="text-align: left; padding: 10px;">
-        <img src="data:image/jpeg;base64,{logo_base64}" style="border-radius: 50%; width: 100px; height: 100px;" alt="Logo"/>
+    <div style="text-align: left; padding: 0px; ">
+        <img src="data:image/jpeg;base64,{logo_base64}" style="border-radius: 10%; width: 160px; height: 130px;" alt="Logo"/>
     </div>
 """
 
