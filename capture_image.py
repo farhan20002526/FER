@@ -61,15 +61,35 @@ if camera_image is not None:
 
     # Initialize dominant emotion and age
     dominant_emotion = None
-    dominant_emotion_score = 0
     age = "N/A"
+    progress_value = 0  # Initialize progress value
 
     if results:
         for result in results:
             bounding_box = result['box']
             emotions = result['emotions']
-            dominant_emotion = max(emotions, key=emotions.get)
-            dominant_emotion_score = emotions[dominant_emotion] * 100  # Scale to percentage
+            dominant_emotion = None
+            dominant_emotion_score = 0
+
+            # Get the maximum emotion score
+            for emotion, score in emotions.items():
+                if score > dominant_emotion_score:
+                    dominant_emotion_score = score
+                    dominant_emotion = emotion
+
+            # Set the progress value based on the dominant emotion
+            if dominant_emotion == "happy":
+                progress_value = 100
+            elif dominant_emotion == "neutral":
+                progress_value = 70
+            elif dominant_emotion == "surprise":
+                progress_value = 40
+            elif dominant_emotion == "sad":
+                progress_value = 30
+            elif dominant_emotion == "angry":
+                progress_value = 10
+            else:
+                progress_value = 0  # Unknown emotion
 
             # Draw bounding box and labels
             cv2.rectangle(frame, (bounding_box[0], bounding_box[1]), 
@@ -98,23 +118,23 @@ if camera_image is not None:
                           (bounding_box[0] + progress_bar_length, bounding_box[1] + bounding_box[3] + 5 + progress_bar_height), 
                           (255, 255, 255), -1)  # Background
 
-        filled_length = int(progress_bar_length * (dominant_emotion_score / 100))  # Calculate filled length
+        filled_length = int(progress_bar_length * (progress_value / 100))  # Calculate filled length
         cv2.rectangle(frame, (bounding_box[0], bounding_box[1] + bounding_box[3] + 5), 
                           (bounding_box[0] + filled_length, bounding_box[1] + bounding_box[3] + 5 + progress_bar_height), 
                           (0, 255, 0), -1)  # Fill with color
 
         # Add percentage text on the progress bar
-        percentage_text = f"{dominant_emotion_score:.2f}%"
+        percentage_text = f"{progress_value}%"
         text_x = bounding_box[0] + (progress_bar_length // 2) - (cv2.getTextSize(percentage_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0][0] // 2)
         text_y = bounding_box[1] + bounding_box[3] + 5 + (progress_bar_height // 2) + 6
         cv2.putText(frame, percentage_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
         # Update emotion and age labels
         if dominant_emotion:
-            emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({dominant_emotion_score:.2f}%)")
+            emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({progress_value}%)")
             age_label_placeholder.write(f"Estimated Age: {age}")
 
-            # Save the frame to a temporary file
+             # Save the frame to a temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
                 cv2.imwrite(tmp_file.name, frame)
                 st.success(f"Frame captured and saved temporarily at {tmp_file.name}")
