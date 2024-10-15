@@ -84,19 +84,19 @@ if camera_image is not None:
                     dominant_emotion_score = score
                     dominant_emotion = emotion
 
-            # Set the progress value based on the dominant emotion
-            if dominant_emotion == "happy":
-                progress_value = 100
-            elif dominant_emotion == "neutral":
-                progress_value = 70
-            elif dominant_emotion == "surprise":
-                progress_value = 40
-            elif dominant_emotion == "sad":
-                progress_value = 30
-            elif dominant_emotion == "angry":
-                progress_value = 10
-            else:
-                progress_value = 0  # Unknown emotion
+                        # Set the progress value based on the dominant emotion
+                if dominant_emotion == "happy":
+                    progress_value = 100
+                elif dominant_emotion == "neutral":
+                    progress_value = 70
+                elif dominant_emotion == "surprise":
+                    progress_value = 40
+                elif dominant_emotion == "sad":
+                    progress_value = 30
+                elif dominant_emotion == "angry":
+                    progress_value = 10
+                else:
+                    progress_value = 0  # Unknown emotion
 
             # Draw bounding box and labels
             cv2.rectangle(frame, (bounding_box[0], bounding_box[1]), 
