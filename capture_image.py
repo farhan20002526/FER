@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from fer import FER
 import time
-import tempfile
+import os
 import base64
 
 # Load the pre-trained age detection model
@@ -49,6 +49,13 @@ age_label_placeholder = st.empty()
 
 # Capture webcam image from the user
 camera_image = st.camera_input("Capture an image from your webcam")
+
+# Specify the folder to save captured images
+capture_folder = "captured_images"  # Change this to your desired folder path
+
+# Create the folder if it does not exist
+if not os.path.exists(capture_folder):
+    os.makedirs(capture_folder)
 
 # If an image is captured, process it
 if camera_image is not None:
@@ -134,22 +141,13 @@ if camera_image is not None:
             emotion_label_placeholder.write(f"Dominant Emotion: {dominant_emotion} ({progress_value}%)")
             age_label_placeholder.write(f"Estimated Age: {age}")
 
-             # Save the frame to a temporary file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
-                cv2.imwrite(tmp_file.name, frame)
-                st.success(f"Frame captured and saved temporarily at {tmp_file.name}")
+            # Save the frame to the specified capture folder
+            save_path = os.path.join(capture_folder, f"{dominant_emotion}_{time.strftime('%Y%m%d-%H%M%S')}.jpg")
+            cv2.imwrite(save_path, frame)
+            st.success(f"Frame captured and saved at {save_path}")
 
-            # Provide a download link for the captured image
-            with open(tmp_file.name, "rb") as f:
-                st.download_button(
-                    label="Download Captured Image",
-                    data=f,
-                    file_name=f"{dominant_emotion}_{time.strftime('%Y%m%d-%H%M%S')}.jpg",
-                    mime="image/jpeg"
-                )
+        # Display the frame in Streamlit
+        stframe.image(frame, channels='BGR')
     else:
         # If no results, prompt the user to retake the picture
         st.warning("Please retake the picture properly, no face detected.")
-    
-    # Display the frame in Streamlit
-    stframe.image(frame, channels='BGR')
