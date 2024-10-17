@@ -24,7 +24,7 @@ def get_base64_of_image(file_path):
 
 # Load your logo image as base64
 logo_base64 = get_base64_of_image("logo.jpg")  # Replace with your logo image file path
-
+ 
 logo_html = f"""
     <div style="text-align: left; padding: 0px; ">
         <img src="data:image/jpeg;base64,{logo_base64}" style="border-radius: 10%; width: 160px; height: 130px;" alt="Logo"/>
@@ -143,11 +143,19 @@ if camera_image is not None:
 
             # Save the frame to the specified capture folder
             save_path = os.path.join(capture_folder, f"{dominant_emotion}_{time.strftime('%Y%m%d-%H%M%S')}.jpg")
-            cv2.imwrite(save_path, frame)
-            st.success(f"Frame captured and saved at {save_path}")
-
+           
         # Display the frame in Streamlit
         stframe.image(frame, channels='BGR')
+
+        # Add a button to save the processed image
+        if st.button("Download Picture"):
+            # Specify the save path for the processed image
+            processed_image_path = os.path.join(capture_folder, f"processed_{dominant_emotion}_{time.strftime('%Y%m%d-%H%M%S')}.jpg")
+            
+            # Save the processed frame with annotations
+            cv2.imwrite(processed_image_path, frame)
+            st.success(f"Processed image saved at: {processed_image_path}")
+
     else:
         # If no results, prompt the user to retake the picture
         st.warning("Please retake the picture properly, no face detected.")
